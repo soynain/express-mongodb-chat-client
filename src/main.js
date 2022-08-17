@@ -1,10 +1,13 @@
 import App from './App.vue'
 
-import { WebSocketLink } from '@apollo/client/link/ws'
+import { WebSocketLink } from '@apollo/client/link/ws';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import router from './router'
 import { createApp, provide, h } from 'vue'
 import { DefaultApolloClient } from '@vue/apollo-composable'
-import { ApolloClient, createHttpLink, InMemoryCache } from '@apollo/client/core'
+import {ApolloLink, ApolloClient, createHttpLink, from, InMemoryCache, split } from '@apollo/client/core'
+import { createClient } from 'graphql-ws';
+import { WebSocket } from 'ws';
 
 // HTTP connection to the API
 const httpLink = createHttpLink({
@@ -12,31 +15,41 @@ const httpLink = createHttpLink({
   uri: 'http://localhost:3000/usuario/graphql',
 })
 
-
-/*const wsLink = new WebSocketLink({
-  uri: `ws://localhost:5000/`,
-  options: {
-    reconnect: true
-  }
-})*/
+const wsLink = new GraphQLWsLink(createClient({
+  url: 'ws://localhost:4000/graphql',
+  webSocketImpl:WebSocket
+}));
 
 // Cache implementation
 const cache = new InMemoryCache()
 
+/*Doesnt work for me, apollo docs indicates that
+websocket can work to perform all types of operations
+anyways, I dont like it but for now I'll be depending with the
+socket*/
+/*const linkSplitter = ApolloLink.split(({ query }) => {
+  const definition = getMainDefinition(query)
+ // console.log(definition)
+  return (
+    definition.kind === "OperationDefinition" &&
+    definition.operation === "subscription"
+  )
+},
+wsLink,
+httpLink);*/ 
+
 // Create the apollo client
 const apolloClient = new ApolloClient({
-  link: httpLink,
+  link:wsLink ,
   cache,
 })
 
 const app = createApp({
-  setup () {
+  setup() {
     provide(DefaultApolloClient, apolloClient)
   },
 
   render: () => h(App),
 })
-
-//app.use(router)
 
 app.mount('#app')
