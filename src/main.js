@@ -1,13 +1,14 @@
-import App from './App.vue'
-
-import { WebSocketLink } from '@apollo/client/link/ws';
+import App from './App.vue';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import router from './router'
 import { createApp, provide, h } from 'vue'
 import { DefaultApolloClient } from '@vue/apollo-composable'
-import {ApolloLink, ApolloClient, createHttpLink, from, InMemoryCache, split } from '@apollo/client/core'
+import {ApolloClient, createHttpLink, from, InMemoryCache, split } from '@apollo/client/core'
 import { createClient } from 'graphql-ws';
 import { WebSocket } from 'ws';
+
+//import LoginComponent from './components/LoginComponent.vue';
+import LoginView from './views/LoginView.vue';
 
 // HTTP connection to the API
 const httpLink = createHttpLink({
@@ -52,4 +53,10 @@ const app = createApp({
   render: () => h(App),
 })
 
-app.mount('#app')
+const NavBar=createApp(LoginView);
+
+app.use(router);
+NavBar.use(router);
+
+app.mount('#app');
+NavBar.mount('#navArea');

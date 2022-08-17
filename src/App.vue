@@ -1,8 +1,15 @@
 <script setup>
-import { useQuery } from '@vue/apollo-composable'
-import gql from 'graphql-tag'
-import { watch } from 'vue';
-import PruebaGraphql from './components/PruebaGraphql.vue';
+import CardComponent from './components/card-component.vue';
+import { ref,provide, onMounted } from 'vue';
+import Dashboard from './views/Dashboard.vue';
+const loginModuleState = ref(false);
+const loginInputsComponentStateParent=ref(false);
+provide('loginInputsComponentStateParent',loginInputsComponentStateParent);
+
+//import { useQuery } from '@vue/apollo-composable'
+//import gql from 'graphql-tag'
+//import { watch } from 'vue';
+/*import PruebaGraphql from './components/PruebaGraphql.vue';
 const { result, loading } = useQuery(gql`
   query encontrarUsuario ($id:ID="62f14a314e227155d752dd27"){
     findUsuario(_id:$id) {
@@ -10,25 +17,30 @@ const { result, loading } = useQuery(gql`
       apellido_paterno
       apellido_materno
       fecha_nac
-}}`);
+}}`);*/
+const cambiarVisibilidadModuloLogin = () => {
+  return loginModuleState.value === true ? loginModuleState.value = false : loginModuleState.value;
+}
 </script>
+<style scoped>
+main {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
+#cardLogin {
+  width: 45rem;
+  height: 17rem;
+  border: 1px solid gray;
+  box-shadow: 5px 5px 15px 2px #888888;
+}
+</style>
 <template>
-  <PruebaGraphql/>
-  <h1 v-if="loading">CARGANDO</h1>
-  <ul v-else-if="result">
-    <h1>HOLAAAA AQUI SERAN LAS QUERYS</h1>
-    <li>
-      {{ result.findUsuario?.nombres }}
-    </li>
-    <li>
-      {{ result.findUsuario?.apellido_paterno }}
-    </li>
-    <li>
-      {{ result.findUsuario?.apellido_materno}}
-    </li>
-    <li>
-      {{ result.findUsuario?.fecha_nac }}
-    </li>
-  </ul>
+  <main>
+    <CardComponent v-if="loginModuleState" id="cardLogin" />
+    <Dashboard/>
+  </main>
 </template>
