@@ -7,7 +7,7 @@ console.log(loginInputsComponentState.value)
 </script>
 <template>
   <div class="card">
-    <LoginFormInputsComponent v-if="loginInputsComponentState.value === true" />
+    <LoginFormInputsComponent v-if="loginInputsComponentState.value" />
     <ChatBoxComponent/>
   </div>
 </template>
