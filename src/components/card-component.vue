@@ -3,7 +3,7 @@ import LoginFormInputsComponent from './LoginFormInputsComponent.vue';
 import { ref, inject, onMounted, onBeforeMount } from 'vue';
 import ChatBoxComponent from './ChatBoxComponent.vue';
 const loginInputsComponentState = inject('loginInputsComponentStateParent');
-console.log(loginInputsComponentState.value)
+//console.log(loginInputsComponentState.value)
 </script>
 <template>
   <div class="card">
