@@ -1,11 +1,26 @@
 <script setup>
 import CardComponent from './components/card-component.vue';
-import { ref,provide, onMounted } from 'vue';
+import { ref, provide, onMounted } from 'vue';
 import Dashboard from './views/Dashboard.vue';
+import Profile from './views/Profile.vue';
 const loginModuleState = ref(false);
-const loginInputsComponentStateParent=ref(false);
-provide('loginInputsComponentStateParent',loginInputsComponentStateParent);
+const dashboardModuleState = ref(false);
+const profileModuleState = ref(true);
+const loginInputsComponentStateParent = ref(false);
 
+provide('loginInputsComponentStateParent', loginInputsComponentStateParent);
+
+function getProfileModuleStateValue() {
+  return new Boolean(profileModuleState.value);
+}
+
+function getDashBoardModuleState() {
+  return new Boolean(dashboardModuleState.value);
+}
+
+function getLoginModuleState() {
+  return new Boolean(loginModuleState.value);
+}
 //import { useQuery } from '@vue/apollo-composable'
 //import gql from 'graphql-tag'
 //import { watch } from 'vue';
@@ -40,7 +55,8 @@ main {
 </style>
 <template>
   <main>
-    <CardComponent v-if="loginModuleState" id="cardLogin" />
-    <Dashboard/>
+    <CardComponent v-if="getLoginModuleState() == true" id="cardLogin" />
+    <Dashboard v-else-if="getDashBoardModuleState() == true" />
+    <Profile v-else/>
   </main>
 </template>
