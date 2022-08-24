@@ -3,12 +3,10 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import router from './router'
 import { createApp, provide, h } from 'vue'
 import { DefaultApolloClient } from '@vue/apollo-composable'
-import {ApolloClient, createHttpLink, from, InMemoryCache, split } from '@apollo/client/core'
+import { ApolloClient, createHttpLink, from, InMemoryCache, split } from '@apollo/client/core'
 import { createClient } from 'graphql-ws';
 import { WebSocket } from 'ws';
-
-//import LoginComponent from './components/LoginComponent.vue';
-import LoginView from './views/LoginView.vue';
+import NavBarComponent from './components/NavBarComponent.vue';
 
 // HTTP connection to the API
 const httpLink = createHttpLink({
@@ -17,8 +15,8 @@ const httpLink = createHttpLink({
 })
 
 const wsLink = new GraphQLWsLink(createClient({
-  url: 'ws://localhost:4000/graphql',
-  webSocketImpl:WebSocket
+  url: 'ws://localhost:4000/usuario/subscriptions/graphql',
+  webSocketImpl: WebSocket
 }));
 
 // Cache implementation
@@ -37,11 +35,11 @@ socket*/
   )
 },
 wsLink,
-httpLink);*/ 
+httpLink);*/
 
 // Create the apollo client
 const apolloClient = new ApolloClient({
-  link:wsLink ,
+  link: wsLink,
   cache,
 })
 
@@ -53,7 +51,15 @@ const app = createApp({
   render: () => h(App),
 })
 
-const NavBar=createApp(LoginView);
+const NavBar = createApp(NavBarComponent);
+router.beforeEach((to, from, next) => {
+  console.log(to.name, from.name)
+  let { usuario_id } = JSON.parse(localStorage.getItem('access-token'));
+  console.log(usuario_id)
+  if (usuario_id === undefined && to.name !== 'login') {
+    next({ name: 'login' })
+  } else next();
+});
 
 app.use(router);
 NavBar.use(router);

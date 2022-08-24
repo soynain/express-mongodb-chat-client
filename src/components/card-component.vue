@@ -1,23 +1,16 @@
 <script setup>
 import LoginFormInputsComponent from './LoginFormInputsComponent.vue';
-import { ref, inject, onMounted, onBeforeMount } from 'vue';
-import ChatBoxComponent from './ChatBoxComponent.vue';
-import UserProfileComponent from './UserProfileComponent.vue';
-const loginInputsComponentState = inject('loginInputsComponentStateParent');
-const chatBoxState = ref(false);
-
-function getLoginInputsComponentState() {
-  return new Boolean(loginInputsComponentState.value);
-}
-
-function getChatBoxState() {
-  return new Boolean(chatBoxState.value);
-}
 </script>
+<style scoped>
+#cardLogin {
+  width: 45rem;
+  height: 17rem;
+  border: 1px solid gray;
+  box-shadow: 5px 5px 15px 2px #888888;
+}
+</style>
 <template>
-  <div class="card">
-    <LoginFormInputsComponent v-if="getLoginInputsComponentState() == true" />
-    <ChatBoxComponent v-else-if="getChatBoxState() == true" />
-    <UserProfileComponent v-else/>
+  <div class="card" id="cardLogin">
+    <LoginFormInputsComponent/>
   </div>
 </template>

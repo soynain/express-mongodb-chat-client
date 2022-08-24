@@ -1,6 +1,7 @@
 <script setup>
-import NavBarComponent from '../components/NavBarComponent.vue';
+import CardComponent from '../components/card-component.vue';
+
 </script>
 <template>
-    <NavBarComponent />
+    <CardComponent />
 </template>

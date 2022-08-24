@@ -1,60 +1,6 @@
 
 <style scoped>
-.profile-basic-data {
-  border-bottom: 1px solid gray;
-  height: 30%;
-}
 
-.profile-picture-container {
-  border-bottom: 1px solid gray;
-  width: 20%;
-  border-radius: 50%;
-  padding: 5px;
-  background-color: #84A98C;
-}
-
-.circle-cont-aux {
-  border: 1px solid black;
-  border-radius: 50%;
-  background-color: black;
-}
-
-.profile-img {
-  object-fit: scale-down;
-  border-radius: 50%;
-}
-
-.profile-name {
-  width: 80%
-}
-
-#nombre-txt {
-  font-size: 20px;
-}
-
-.friends-container {
-  height: 70%;
-}
-
-.friends-list {
-  height: 80%;
-  overflow-y: auto;
-}
-
-.friends-count {
-  border-bottom: 1px solid gray;
-}
-#aux-margin{
-  margin-left: 5px;
-}
-
-.buttons-actions {
-  height: 20%;
-}
-
-.friend-block{
-  border-bottom: 1px solid gray;
-}
 </style>
 <template>
     <div class="profile-box w-100 h-100 d-flex flex-column">
