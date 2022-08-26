@@ -2,30 +2,60 @@
 import ChatBoxIntroductionComponent from './ChatBoxIntroductionComponent.vue';
 import { ref, watchEffect } from 'vue';
 let introductionComponentState = ref(true);
-let removeIntroductionWindow=ref(0);
+let removeIntroductionWindow = ref(0);
 import { useQuery } from '@vue/apollo-composable'
-import gql from 'graphql-tag'
-import { watch } from 'vue';
+import gql from 'graphql-tag';
+import { useApolloClient } from '@vue/apollo-composable';
+
+let resultMessages = ref([]);
+const { resolveClient } = useApolloClient()
 let { usuario_id } = JSON.parse(localStorage.getItem('access-token'));
-const { result, loading } = useQuery(gql`
-  query encontrarAmigos($emisor_usuario_fk:String){
-  findAmigosUsuario(emisor_usuario_fk:$emisor_usuario_fk){
+let { result, loading } = useQuery(gql`
+  query encontrarAmigos($emisor_usuario_fk:String,$status:String){
+  findAmigosUsuario(emisor_usuario_fk:$emisor_usuario_fk status:$status){
   	_id
+    emisor_usuario_fk
+    destinatario_usuario_fk
+    status
     nombres_usuario{
       usuario
     }
   }
 }`, {
-    emisor_usuario_fk: usuario_id
-})
+    emisor_usuario_fk: usuario_id,
+    status: 'ACEPTADO'
+});
 
 function getIntroductionComponentState() {
     return new Boolean(introductionComponentState.value);
 }
 
-function removeIntroductionWindowFn(){
-    introductionComponentState.value=false;
-    return removeIntroductionWindow.value++;
+function removeIntroductionWindowFnAndFetchMessages(userOwnId, fkIdOfFriend, callback) {
+    introductionComponentState.value = false;
+    callback(userOwnId, fkIdOfFriend);
+    removeIntroductionWindow.value++;
+}
+
+async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario_fk) {
+    let client = resolveClient();
+    let messagesToBeRecovered = await client.query({
+        query: gql`
+        query listarMensajesChat($emisor_usuario_fk:String $destinatario_usuario_fk:String){
+        findPrivateMensajes(emisor_usuario_fk:$emisor_usuario_fk,destinatario_usuario_fk:$destinatario_usuario_fk){
+            mensaje
+            emisor_usuario_fk
+            destinatario_usuario_fk
+            fecha_envio
+            fecha_visto
+            sala_fk
+        }}`,
+        variables:
+        {
+            emisor_usuario_fk: emisor_usuario_fk,
+            destinatario_usuario_fk: destinatario_usuario_fk
+        }
+    });
+    resultMessages.value=messagesToBeRecovered.data.findPrivateMensajes;
 }
 </script>
 <style scoped>
@@ -74,9 +104,12 @@ function removeIntroductionWindowFn(){
     cursor: pointer;
 }
 
-.chat-wrapper-zone {
-    overflow-y: auto;
+.chat-zone {
     height: 85%;
+}
+
+.chat-scroll-zone{
+    overflow-y: auto;
 }
 
 .left-bubble,
@@ -106,7 +139,9 @@ function removeIntroductionWindowFn(){
                     :key="result.findAmigosUsuario[index]._id">
                     <div class="contact-box d-flex flex-row w-100">
                         <div class="contact-name-and-options text-center w-75">
-                            <span  @click="removeIntroductionWindowFn" class="username-link"><b>{{ result.findAmigosUsuario[index].nombres_usuario.usuario }}</b></span>
+                            <span @click="removeIntroductionWindowFnAndFetchMessages(result.findAmigosUsuario[index].emisor_usuario_fk, result.findAmigosUsuario[index].destinatario_usuario_fk, getMensajesBetweenAFriend)" class="username-link">
+                                <b>{{ result.findAmigosUsuario[index].nombres_usuario.usuario }}</b>
+                            </span>
                             <div class="action-icons-container w-100">
                                 <img class="icon-group" src="../assets/icons8-male-user-24.png" alt="add_friend">
                                 <em class="option-txt">Ver perfil</em>
@@ -119,14 +154,19 @@ function removeIntroductionWindowFn(){
                 </div>
                 <div class="aux-white-space"></div>
             </div>
-            <div class="chat-area d-flex flex-column justify-content-center align-items-center h-100 w-75" :key="removeIntroductionWindow">
-                <ChatBoxIntroductionComponent v-if="getIntroductionComponentState() == true" />
+            <div class="chat-area d-flex flex-column justify-content-center align-items-center h-100 w-75"
+                :key="removeIntroductionWindow">
+                <ChatBoxIntroductionComponent v-if="getIntroductionComponentState() == true && Object.entries(resultMessages).length === 0" />
                 <div class="w-100 h-100" v-else>
-                    <div  class="chat-wrapper-zone w-100 d-flex flex-column p-3">
-                        <span class="left-bubble h-auto mb-4 p-2 w-50 text-break align-self-left">Hola we como has
-                            estado</span>
-                        <span class="right-bubble h-auto mb-4 p-2 w-50 text-break align-self-end">Bien muchas
-                            gracias</span>
+                    <div class="chat-zone w-100 d-flex flex-column p-3" >
+                        <div class="w-100 h-auto d-flex flex-column chat-scroll-zone"  v-for="item in resultMessages">
+                            <span class="left-bubble h-auto mb-4 p-2 w-50 text-break align-self-start" v-if="item.emisor_usuario_fk!==usuario_id" >
+                                {{ item.mensaje }}
+                            </span>
+                            <span class="right-bubble h-auto mb-4 p-2 w-50 text-break align-self-end" v-else>
+                                {{ item.mensaje }}
+                            </span>
+                        </div>
                     </div>
                     <div class="message-creator-zone d-flex flex-row p-1 w-100">
                         <div class="button-block pe-1 h-100 w-25">

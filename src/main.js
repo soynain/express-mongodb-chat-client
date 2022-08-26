@@ -52,10 +52,10 @@ const app = createApp({
 })
 
 const NavBar = createApp(NavBarComponent);
+
+
 router.beforeEach((to, from, next) => {
-  console.log(to.name, from.name)
   let { usuario_id } = JSON.parse(localStorage.getItem('access-token'));
-  console.log(usuario_id)
   if (usuario_id === undefined && to.name !== 'login') {
     next({ name: 'login' })
   } else next();
