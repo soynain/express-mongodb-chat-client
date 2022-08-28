@@ -1,13 +1,17 @@
 <script setup>
 import ChatBoxIntroductionComponent from './ChatBoxIntroductionComponent.vue';
-import { ref, watchEffect } from 'vue';
-let introductionComponentState = ref(true);
-let removeIntroductionWindow = ref(0);
-import { useQuery } from '@vue/apollo-composable'
+import { ref, watch, watchEffect } from 'vue';
+import { useQuery, useSubscription } from '@vue/apollo-composable'
 import gql from 'graphql-tag';
 import { useApolloClient } from '@vue/apollo-composable';
 
-let resultMessages = ref([]);
+let introductionComponentState = ref(true);
+let removeIntroductionWindow = ref(0);
+let resultMessagesForFinalRender = ref([]);
+let listenForNewMessagesState=ref({});
+let pushReceivingMessagesForRenderingState=ref([]);
+let renderNewBubbleState=ref(false);
+
 const { resolveClient } = useApolloClient()
 let { usuario_id } = JSON.parse(localStorage.getItem('access-token'));
 let { result, loading } = useQuery(gql`
@@ -30,13 +34,44 @@ function getIntroductionComponentState() {
     return new Boolean(introductionComponentState.value);
 }
 
-function removeIntroductionWindowFnAndFetchMessages(userOwnId, fkIdOfFriend, callback) {
+function getRenderNewBubbleState(){
+    return new Boolean(renderNewBubbleState.value);
+}
+
+async function removeIntroductionWindowFnAndFetchMessages(userOwnId, fkIdOfFriend, callback) {
     introductionComponentState.value = false;
-    callback(userOwnId, fkIdOfFriend);
+    renderNewBubbleState.value=false;
+    pushReceivingMessagesForRenderingState.value=[];
+    await callback(userOwnId, fkIdOfFriend,subscribeToMessageChatRoom);
     removeIntroductionWindow.value++;
 }
 
-async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario_fk) {
+async function subscribeToMessageChatRoom(sala_fk){
+    let client = resolveClient();
+    let subscriptionObserver=await client.subscribe({
+        query:gql`
+        subscription recibirMensajes($sala_fk:String){
+            recibirMensajes(sala_fk:$sala_fk){
+                _id
+                sala_fk
+                mensaje
+                fecha_envio
+                fecha_visto
+                emisor_usuario_fk
+                destinatario_usuario_fk
+        }}`,
+        variables:{
+            sala_fk:sala_fk
+        }
+    }).subscribe({next(data){
+        listenForNewMessagesState.value=data.data;
+    },
+    error(err){
+        console.log(err,' error de subscripción')
+    }});
+}
+
+async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario_fk,callback) {
     let client = resolveClient();
     let messagesToBeRecovered = await client.query({
         query: gql`
@@ -55,8 +90,17 @@ async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario
             destinatario_usuario_fk: destinatario_usuario_fk
         }
     });
-    resultMessages.value=messagesToBeRecovered.data.findPrivateMensajes;
+    resultMessagesForFinalRender.value=messagesToBeRecovered.data.findPrivateMensajes;
+    await callback(resultMessagesForFinalRender.value[0].sala_fk);
 }
+
+watch(listenForNewMessagesState,data=>{
+    console.log(data.recibirMensajes,' si reacciona ahora');
+    pushReceivingMessagesForRenderingState.value.push(data.recibirMensajes);
+    renderNewBubbleState.value=true;
+});
+
+
 </script>
 <style scoped>
 #chats-card {
@@ -105,12 +149,10 @@ async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario
 }
 
 .chat-zone {
-    height: 85%;
-}
-
-.chat-scroll-zone{
+    height:  85%;
     overflow-y: auto;
 }
+
 
 .left-bubble,
 .right-bubble {
@@ -156,10 +198,18 @@ async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario
             </div>
             <div class="chat-area d-flex flex-column justify-content-center align-items-center h-100 w-75"
                 :key="removeIntroductionWindow">
-                <ChatBoxIntroductionComponent v-if="getIntroductionComponentState() == true && Object.entries(resultMessages).length === 0" />
+                <ChatBoxIntroductionComponent v-if="getIntroductionComponentState() == true && Object.entries(resultMessagesForFinalRender).length === 0" />
                 <div class="w-100 h-100" v-else>
                     <div class="chat-zone w-100 d-flex flex-column p-3" >
-                        <div class="w-100 h-auto d-flex flex-column chat-scroll-zone"  v-for="item in resultMessages">
+                        <div class="w-100 h-auto d-flex flex-column chat-scroll-zone"  v-for="item in resultMessagesForFinalRender">
+                            <span class="left-bubble h-auto mb-4 p-2 w-50 text-break align-self-start" v-if="item.emisor_usuario_fk!==usuario_id" >
+                                {{ item.mensaje }}
+                            </span>
+                            <span class="right-bubble h-auto mb-4 p-2 w-50 text-break align-self-end" v-else>
+                                {{ item.mensaje }}
+                            </span>
+                        </div>
+                        <div class="w-100 h-auto d-flex flex-column chat-scroll-zone" v-if="getRenderNewBubbleState()==true" :key="item._id" v-for="item of pushReceivingMessagesForRenderingState">
                             <span class="left-bubble h-auto mb-4 p-2 w-50 text-break align-self-start" v-if="item.emisor_usuario_fk!==usuario_id" >
                                 {{ item.mensaje }}
                             </span>
