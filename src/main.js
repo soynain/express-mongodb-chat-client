@@ -55,10 +55,27 @@ const NavBar = createApp(NavBarComponent);
 
 
 router.beforeEach((to, from, next) => {
-  let { usuario_id } = JSON.parse(localStorage.getItem('access-token'));
-  if (usuario_id === undefined && to.name !== 'login') {
-    next({ name: 'login' })
-  } else next();
+ /* let user_info = JSON.parse(localStorage.getItem('access-token'));
+  console.log(user_info)
+  if(user_info!==null){
+    console.log(user_info,' punto imposible');
+    if (user_info.usuario_id === undefined && to.name !== 'login') {
+      next({ name: 'login' });
+    }else if(user_info.usuario_id!==undefined && to.name==='login'){
+      next({name:'dashboard'});
+    }else next();
+  }else{
+    console.log(user_info,'  no existe');
+    next({ name: 'login' });
+  }*/
+ // let user_info = JSON.parse(localStorage.getItem('access-token'));
+  if(localStorage.getItem('access-token')===null && to.name!=='login'){
+    next({name:'login'});
+  }else if(localStorage.getItem('access-token')!==null && to.name==='login'){
+    next({name:'dashboard'});
+  }else{
+    next();
+  }
 });
 
 app.use(router);
