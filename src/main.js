@@ -36,7 +36,6 @@ socket*/
 },
 wsLink,
 httpLink);*/
-
 // Create the apollo client
 const apolloClient = new ApolloClient({
   link: wsLink,

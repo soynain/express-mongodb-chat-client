@@ -16,19 +16,38 @@ let introductionComponentState = ref(true),
     destinatarioFkState = ref(""),
     messageBody=ref(""),
     emptyMessageHandlerState=ref(false),
-    deleteGeneratedSalaFKIdState=ref(false);
+    deleteGeneratedSalaFKIdState=ref(false),
+    onlineStatusSubscriptionClientEmitter=ref([]),
+    onlineStatusArray=ref([]),
+    refreshOnlineStatus=ref(0);
 
 const { resolveClient } = useApolloClient()
+
 let { usuario_id } = JSON.parse(localStorage.getItem('access-token'));
+onlineStatusSubscriptionClientEmitter=useSubscription(gql`
+    subscription listenOnlineUsersStatus($usuario_id:String){
+        activarStatusOnline(usuario_id:$usuario_id)
+    }
+`,{
+    usuario_id:usuario_id
+});
+
 let { result, loading } = useQuery(gql`
   query encontrarAmigos($emisor_usuario_fk:String,$status:String){
-  findAmigosUsuario(emisor_usuario_fk:$emisor_usuario_fk status:$status){
-  	_id
-    emisor_usuario_fk
-    destinatario_usuario_fk
-    status
-    nombres_usuario(id_usuario_cliente:$emisor_usuario_fk){usuario}}}`,
-    { emisor_usuario_fk: usuario_id, status: 'ACEPTADO' });
+    findAmigosUsuario(emisor_usuario_fk:$emisor_usuario_fk status:$status){
+  	    _id
+        emisor_usuario_fk
+        destinatario_usuario_fk
+        status
+        nombres_usuario(id_usuario_cliente:$emisor_usuario_fk){
+            usuario
+        }
+    }}`,
+    {
+         emisor_usuario_fk: usuario_id, 
+         status: 'ACEPTADO' 
+    }
+);
 
 function getIntroductionComponentState() {
     return new Boolean(introductionComponentState.value);
@@ -87,7 +106,7 @@ async function crearNuevaSalaDeChat(){
         mutation crearNuevaSalaDeChat($id:String){
             crearNuevaSalaDeChat(_id:$id){
                 amigos_fk
-                    _id
+                _id
             }
         }`,
         variables:{
@@ -111,6 +130,8 @@ async function removeIntroductionWindowFnAndFetchMessages(userOwnId, fkIdOfFrien
     removeIntroductionWindow.value++;
 }
 
+/*This function musn't return anything because it's an implicit
+and global scope observer*/
 async function subscribeToMessageChatRoom(sala_fk) {
     let client = resolveClient();
     let subscriptionObserver = await client.subscribe({
@@ -173,9 +194,8 @@ async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario
     }else{
         /*in this condition I must apply with another query the id chat room */
         let idAmistadAEncontrar=await encontrarUnaAmistadEnParticular();
-    //    console.log(idAmistadAEncontrar.data.findAmistadParticular._id);
         let nuevaSalaChatIdAGenerar=await crearNuevaSalaDeChat();
-        console.log(nuevaSalaChatIdAGenerar);
+        //console.log(nuevaSalaChatIdAGenerar);
 
         salaFkState.value=nuevaSalaChatIdAGenerar.data.crearNuevaSalaDeChat.amigos_fk;
         deleteGeneratedSalaFKIdState.value=true;
@@ -187,8 +207,6 @@ async function getMensajesBetweenAFriend(emisor_usuario_fk, destinatario_usuario
 
 async function sendMessageMutation() {
     let client = resolveClient();
-    console.log(salaFkState.value,' fjfjfjf')
-    console.log(messageBody.value)
     let mutationAnswer = await client.mutate({
         mutation: gql`
         mutation enviarMensaje($sala_fk:String! $mensaje:String! $emisor_usuario_fk:String! $destinatario_usuario_fk:String!){
@@ -212,16 +230,33 @@ async function sendMessageMutation() {
     messageBody.value="";
 }
 
-onMounted(()=>{
-    console.log(result);
-})
-
 watch(listenForNewMessagesState, data => {
     pushReceivingMessagesForRenderingState.value.push(data.recibirMensajes);
     renderNewBubbleState.value = true;
 });
 
+watch(onlineStatusSubscriptionClientEmitter.result,async(data)=>{
+    console.log(data.activarStatusOnline,' online from server');
+    let client=resolveClient();
+  //  console.log(data.activarStatusOnline,' id from user entering the network ',typeof data.activarStatusOnline);
+    if(!onlineStatusArray.value.includes(data.activarStatusOnline)){
+        onlineStatusArray.value.push(data.activarStatusOnline);    
+    }
+    await client.mutate({
+            mutation:gql`
+            mutation bounceMyConnectionBack($usuario_id:String){
+                bouncingOnlineConnectionBack(usuario_id:$usuario_id)
+            }`,
+            variables:{
+                usuario_id:usuario_id
+            }
+        });
+    refreshOnlineStatus.value++;
+});
 
+onMounted(()=>{
+    console.log(result);
+});
 </script>
 <style scoped>
 #chats-card {
@@ -253,8 +288,15 @@ watch(listenForNewMessagesState, data => {
     cursor: pointer;
 }
 
-.status-circle {
+.status-circle-online {
     background-color: green;
+    width: 10px;
+    height: 10px;
+    border-radius: 15px;
+}
+
+.status-circle-offline {
+    background-color: gray;
     width: 10px;
     height: 10px;
     border-radius: 15px;
@@ -294,11 +336,11 @@ watch(listenForNewMessagesState, data => {
 <template>
     <div class="card" id="chats-card">
         <div class="chat-container-main w-100 h-100 d-flex flex-row">
-            <div class="contact-list-container d-flex flex-column-reverse justify-content-between h-100 w-25">
+            <div class="contact-list-container d-flex flex-column-reverse justify-content-between h-100 w-25" :key="refreshOnlineStatus">
                 <div class="contacts-wrapper w-100 h-auto text-center" v-if="loading">
                     ..LOADING
                 </div>
-                <div v-else class="contacts-wrapper w-100 h-auto" >
+                <div v-else class="contacts-wrapper w-100 h-auto"  >
                   <div class="contact-box d-flex flex-row w-100" v-for="friend in result.findAmigosUsuario">
                         <div class="contact-name-and-options text-center w-75">
                             <span @click="removeIntroductionWindowFnAndFetchMessages(friend.emisor_usuario_fk, friend.destinatario_usuario_fk, getMensajesBetweenAFriend)"  class="username-link">
@@ -310,23 +352,10 @@ watch(listenForNewMessagesState, data => {
                             </div>
                         </div>
                         <div class="status d-flex flex-column justify-content-center align-items-center w-25">
-                            <div class="status-circle"></div>
+                            <div class="status-circle-online" v-if="onlineStatusArray.includes(friend.destinatario_usuario_fk)"></div>
+                            <div class="status-circle-offline" v-else></div>     
                         </div>
                     </div>
-                    <!--<div class="contact-box d-flex flex-row w-100">
-                        <div class="contact-name-and-options text-center w-75">
-                            <span @click="removeIntroductionWindowFnAndFetchMessages(result.findAmigosUsuario[index].emisor_usuario_fk, result.findAmigosUsuario[index].destinatario_usuario_fk, getMensajesBetweenAFriend)"  class="username-link">
-                                <b @click="setDestinatarioFkStateValue(result.findAmigosUsuario[index].destinatario_usuario_fk)">{{ result.findAmigosUsuario[index].nombres_usuario.usuario }}</b>
-                            </span>
-                            <div class="action-icons-container w-100">
-                                <img class="icon-group" src="../assets/icons8-male-user-24.png" alt="add_friend">
-                                <em class="option-txt">Ver perfil</em>
-                            </div>
-                        </div>
-                        <div class="status d-flex flex-column justify-content-center align-items-center w-25">
-                            <div class="status-circle"></div>
-                        </div>
-                    </div>-->
                 </div>
                 <div class="aux-white-space"></div>
             </div>
